@@ -85,24 +85,21 @@ export default function Navbar() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled
-            ? "bg-black/80 backdrop-blur-md py-4 shadow-lg border-b border-white/5"
-            : "bg-transparent py-6"
-        }`}
+        className={`fixed top-0 left-0 right-0  z-50 transition-all duration-300 ${isScrolled
+          ? "bg-black/80 backdrop-blur-md py-4 shadow-lg border-b border-white/5"
+          : "bg-transparent pt-2"
+          }`}
       >
-        <div className="max-w-[1740px] mx-auto px-4 md:px-8 flex items-center justify-between">
+        <div className="max-w-[1740px] mx-auto px-4 md:px-8 flex items-center justify-between ">
           {/* Logo */}
           <Link
             href="/"
-            className="relative h-20 w-60 flex items-center justify-center transition-transform hover:scale-105"
+            className="flex items-center transition-transform hover:scale-105 "
           >
-            <Image
+            <img
+              src="/logo-color.svg"
               alt="Logo"
-              src="/logo-v2.png"
-              fill
-              priority
-              className="object-contain"
+              className="h-20 object-contain"
             />
           </Link>
 
@@ -118,9 +115,8 @@ export default function Navbar() {
                   <li key={link.title}>
                     <Link
                       href={link.url}
-                      className={`transition-colors duration-200 hover:text-primary ${
-                        isActive ? "text-primary font-bold" : "text-white"
-                      }`}
+                      className={`transition-colors duration-200 hover:text-primary ${isActive ? "text-primary font-bold" : "text-white"
+                        }`}
                     >
                       {link.title}
                     </Link>
@@ -185,11 +181,10 @@ export default function Navbar() {
                 {/* Header inside drawer */}
                 <div className="flex items-center justify-between mb-12">
                   <div className="relative h-20 w-56">
-                    <Image
+                    <img
                       alt="Logo"
-                      src="/logo-v2.png"
-                      fill
-                      className="object-contain"
+                      src="/logo.svg"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                   <button
@@ -209,9 +204,8 @@ export default function Navbar() {
                         key={link.title}
                         href={link.url}
                         onClick={() => setIsOpen(false)}
-                        className={`transition-colors py-2 hover:text-primary ${
-                          isActive ? "text-primary font-bold" : "text-white"
-                        }`}
+                        className={`transition-colors py-2 hover:text-primary ${isActive ? "text-primary font-bold" : "text-white"
+                          }`}
                       >
                         {link.title}
                       </Link>

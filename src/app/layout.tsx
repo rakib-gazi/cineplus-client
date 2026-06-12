@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import ClientLayout from "@/components/ClientLayout";
 
 export const metadata: Metadata = {
-  title: "The Viral Fever",
+  title: "Cine Plus Studio",
   description:
     "The Viral Fever (TVF) is one of India's most popular and critically acclaimed content brands. Since its inception in 2012, TVF has consistently delivered original content that breaks stereotypes and resonates with millions, striking a balance between youth-centric storytelling and family-friendly entertainment.",
   keywords:
     "TVF, viral fever, shows, brand, the timeliners, the screen patti, girliyapa, panchayat, gullak, kota factory, sketches, reels, partnerships",
   openGraph: {
-    title: "The Viral Fever",
+    title: "Cine Plus Studio",
     description:
       "The Viral Fever (TVF) is one of India's most popular and critically acclaimed content brands.",
     siteName: "The Viral Fever",
@@ -27,7 +26,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "The Viral Fever",
+    title: "Cine Plus Studio",
     description:
       "The Viral Fever (TVF) is one of India's most popular and critically acclaimed content brands.",
     images: ["/logo.png"],
@@ -48,9 +47,7 @@ export default function RootLayout({
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col bg-black text-white">
-        <Navbar />
-        <main className="flex-grow pt-24">{children}</main>
-        <Footer />
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

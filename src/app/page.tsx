@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -41,8 +41,70 @@ const MARQUEE_POSTERS = [
 ];
 
 export default function HomePage() {
-  const [selectedShow, setSelectedShow] = useState<Show | null>(null);
+  const [selectedShow, setSelectedShow] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [heroContent, setHeroContent] = useState({
+    tag: "India's Premium Digital Content Creators",
+    title: "Cine Plus Studio",
+    shortDescription: "Consistently delivering original stories that break stereotypes, balance youth-centric themes, and bring families together.",
+    link: "/originals"
+  });
+  const [homepageShows, setHomepageShows] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchActiveHero = async () => {
+      try {
+        const res = await fetch("/api/hero/active");
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success && result.active && result.data) {
+            setHeroContent({
+              tag: result.data.tag,
+              title: result.data.title,
+              shortDescription: result.data.shortDescription,
+              link: result.data.link
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching active hero content:", err);
+      }
+    };
+
+    const fetchHomepageShows = async () => {
+      try {
+        const res = await fetch("/api/shows/homepage");
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success && result.data) {
+            setHomepageShows(result.data);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching homepage shows:", err);
+      }
+    };
+
+    fetchActiveHero();
+    fetchHomepageShows();
+  }, []);
+
+  const mappedDynamicShows = homepageShows.map((item) => ({
+    title: item.title,
+    category: item.showDramaType ? item.dramaType : "",
+    image: item.image,
+    rating: item.imdbScore,
+    desc: item.shortDescription,
+    cast: [],
+    link: item.link,
+    awardWinnerCategory: item.awardWinnerCategory,
+    awardGivenInstitution: item.awardGivenInstitution,
+    showAwards: item.showAwards,
+    showDramaType: item.showDramaType,
+    showImdbScore: item.showImdbScore,
+  }));
+
+  const combinedShows = [...mappedDynamicShows, ...SHOWS_DATA];
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -72,21 +134,21 @@ export default function HomePage() {
             className="max-w-[700px]"
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider mb-6">
-              <Sparkles className="h-3 w-3" /> India&apos;s Premium Digital Content Creators
+              <Sparkles className="h-3 w-3" /> {heroContent.tag}
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight text-white mb-6 uppercase">
-              The Viral Fever
+              {heroContent.title}
             </h1>
             <p className="text-white/80 text-base sm:text-lg leading-relaxed mb-8">
-              Consistently delivering original stories that break stereotypes, balance
-              youth-centric themes, and bring families together.
+              {heroContent.shortDescription}
             </p>
             <div className="flex flex-wrap items-center gap-4">
               <Link
-                href="/originals"
+                href={heroContent.link}
+                target={heroContent.link.startsWith("http") ? "_blank" : undefined}
                 className="inline-flex items-center gap-3 px-6 py-3.5 rounded-lg bg-primary text-black font-bold text-sm tracking-wide transition-all hover:bg-white hover:scale-[1.02] shadow-xl"
               >
-                Watch Originals <ArrowRight className="h-4 w-4" />
+                Watch Now <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/#about"
@@ -176,7 +238,7 @@ export default function HomePage() {
 
           {/* Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-            {SHOWS_DATA.slice(0, 8).map((show, idx) => (
+            {combinedShows.slice(0, 8).map((show, idx) => (
               <motion.div
                 key={show.title}
                 initial={{ opacity: 0, y: 30 }}
@@ -200,9 +262,11 @@ export default function HomePage() {
 
                 {/* Card Detail Overlay */}
                 <div className="absolute inset-x-0 bottom-0 p-4 md:p-6 flex flex-col justify-end translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                  <div className="inline-flex items-center gap-1 text-[10px] md:text-xs text-primary font-bold uppercase tracking-wider mb-2">
-                    <Award className="h-3 w-3" /> Rated {show.rating} IMDB
-                  </div>
+                  {show.rating && (!("showImdbScore" in show) || show.showImdbScore) && (
+                    <div className="inline-flex items-center gap-1 text-[10px] md:text-xs text-primary font-bold uppercase tracking-wider mb-2">
+                      <Award className="h-3 w-3" /> Rated {show.rating} IMDB
+                    </div>
+                  )}
                   <h3 className="text-white font-extrabold text-base md:text-xl uppercase tracking-wide leading-tight group-hover:text-primary transition-colors">
                     {show.title}
                   </h3>

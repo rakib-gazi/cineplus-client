@@ -5,8 +5,17 @@ import Image from "next/image";
 import { X, Play, ArrowRight } from "lucide-react";
 import { Show } from "@/data/shows";
 
+interface ExtendedShow extends Show {
+  link?: string;
+  awardWinnerCategory?: string;
+  awardGivenInstitution?: string;
+  showAwards?: boolean;
+  showDramaType?: boolean;
+  showImdbScore?: boolean;
+}
+
 interface ShowDetailsModalProps {
-  show: Show | null;
+  show: ExtendedShow | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -44,9 +53,11 @@ export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsM
             <div className="lg:col-span-7 flex flex-col justify-center order-2 lg:order-1">
               
               {/* Category / Genre Tag */}
-              <span className="text-primary text-xs sm:text-sm font-extrabold uppercase tracking-widest mb-4 block">
-                {show.category}
-              </span>
+              {show.category && (!("showDramaType" in show) || show.showDramaType) && (
+                <span className="text-primary text-xs sm:text-sm font-extrabold uppercase tracking-widest mb-4 block">
+                  {show.category}
+                </span>
+              )}
 
               {/* Title */}
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white mb-6 leading-none">
@@ -59,61 +70,64 @@ export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsM
               </p>
 
               {/* Laurels Badge (Awards Indicator) */}
-              <div className="flex items-center gap-3 mb-8">
-                <svg className="h-10 w-10 text-white/40 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" className="hidden" />
-                  <path d="M6 12c0-3.31 2.69-6 6-6s6 2.69 6 6-2.69 6-6 6-6-2.69-6-6zm1.5 0c0 2.48 2.02 4.5 4.5 4.5s4.5-2.02 4.5-4.5-2.02-4.5-4.5-4.5-4.5 2.02-4.5 4.5z" className="hidden" />
-                  {/* Laurels graphics */}
-                  <path d="M2.3 8A9.9 9.9 0 0 0 1 12c0 2.3.8 4.4 2.1 6.1l1.5-1.3A7.9 7.9 0 0 1 3 12c0-1.8.6-3.5 1.6-4.9L2.3 8zm19.4 0l-1.5 1.2A7.9 7.9 0 0 1 21 12c0 1.8-.6 3.5-1.6 4.9l1.5 1.3A9.9 9.9 0 0 0 23 12c0-2.3-.8-4.4-2.1-6.1zM8 19.5c1.2.3 2.6.5 4 .5s2.8-.2 4-.5l-.4-1.9c-1.1.3-2.3.4-3.6.4s-2.5-.1-3.6-.4l-.4 1.9zM12 4a7.9 7.9 0 0 1 3.6.8l.9-1.8A9.9 9.9 0 0 0 12 2a9.9 9.9 0 0 0-4.5 1l.9 1.8A7.9 7.9 0 0 1 12 4z" />
-                </svg>
-                <div className="flex flex-col">
-                  <span className="text-[10px] sm:text-xs font-bold tracking-widest text-white/50 uppercase">
-                    TVF Digital Awards Winner
-                  </span>
-                  <span className="text-xs sm:text-sm font-semibold text-white/80">
-                    Critically Acclaimed Series
-                  </span>
+              {(!("showAwards" in show) || show.showAwards) && (
+                <div className="flex items-center gap-3 mb-8">
+                  <svg className="h-10 w-10 text-white/40 fill-current" viewBox="0 0 24 24">
+                    <path d="M2.3 8A9.9 9.9 0 0 0 1 12c0 2.3.8 4.4 2.1 6.1l1.5-1.3A7.9 7.9 0 0 1 3 12c0-1.8.6-3.5 1.6-4.9L2.3 8zm19.4 0l-1.5 1.2A7.9 7.9 0 0 1 21 12c0 1.8-.6 3.5-1.6 4.9l1.5 1.3A9.9 9.9 0 0 0 23 12c0-2.3-.8-4.4-2.1-6.1zM8 19.5c1.2.3 2.6.5 4 .5s2.8-.2 4-.5l-.4-1.9c-1.1.3-2.3.4-3.6.4s-2.5-.1-3.6-.4l-.4 1.9zM12 4a7.9 7.9 0 0 1 3.6.8l.9-1.8A9.9 9.9 0 0 0 12 2a9.9 9.9 0 0 0-4.5 1l.9 1.8A7.9 7.9 0 0 1 12 4z" />
+                  </svg>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] sm:text-xs font-bold tracking-widest text-white/50 uppercase">
+                      {show.awardGivenInstitution || "TVF Digital Awards Winner"}
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold text-white/80">
+                      {show.awardWinnerCategory || "Critically Acclaimed Series"}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Cast Section */}
-              <div className="mb-10">
-                <h4 className="text-xs font-extrabold uppercase tracking-widest text-white/40 mb-4">
-                  Cast & Crew
-                </h4>
-                <div className="flex flex-wrap gap-x-6 gap-y-4 max-w-xl">
-                  {show.cast?.map((actor, index) => (
-                    <div key={index} className="flex flex-col items-center text-center w-[70px]">
-                      <div className="relative w-12 h-12 rounded-full overflow-hidden border border-white/10 mb-2">
-                        <Image
-                          src={actor.image}
-                          alt={actor.name}
-                          fill
-                          className="object-cover"
-                          sizes="48px"
-                        />
+              {show.cast && show.cast.length > 0 && (
+                <div className="mb-10">
+                  <h4 className="text-xs font-extrabold uppercase tracking-widest text-white/40 mb-4">
+                    Cast & Crew
+                  </h4>
+                  <div className="flex flex-wrap gap-x-6 gap-y-4 max-w-xl">
+                    {show.cast?.map((actor, index) => (
+                      <div key={index} className="flex flex-col items-center text-center w-[70px]">
+                        <div className="relative w-12 h-12 rounded-full overflow-hidden border border-white/10 mb-2">
+                          <Image
+                            src={actor.image}
+                            alt={actor.name}
+                            fill
+                            className="object-cover"
+                            sizes="48px"
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-white/70 leading-tight">
+                          {actor.name}
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold text-white/70 leading-tight">
-                        {actor.name}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Buttons Panel */}
               <div className="flex flex-wrap items-center gap-4">
                 {/* IMDb Rating button */}
-                <div className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full border border-primary/40 bg-black text-white font-bold text-xs uppercase tracking-wider">
-                  <span className="bg-primary text-black px-1.5 py-0.5 rounded font-black text-[10px]">
-                    IMDb
-                  </span>
-                  <span>{show.rating} / 10</span>
-                </div>
+                {(!("showImdbScore" in show) || show.showImdbScore) && show.rating && (
+                  <div className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full border border-primary/40 bg-black text-white font-bold text-xs uppercase tracking-wider">
+                    <span className="bg-primary text-black px-1.5 py-0.5 rounded font-black text-[10px]">
+                      IMDb
+                    </span>
+                    <span>{show.rating} / 10</span>
+                  </div>
+                )}
 
                 {/* Watch Now Button */}
                 <a
-                  href="https://www.youtube.com/@TheViralFever"
+                  href={show.link || "https://www.youtube.com/@TheViralFever"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-between gap-6 pl-6 pr-2 py-2 rounded-full border border-white bg-black hover:bg-white hover:text-black font-extrabold text-xs uppercase tracking-widest transition-all group"
