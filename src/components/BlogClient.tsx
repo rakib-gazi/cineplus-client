@@ -14,10 +14,14 @@ interface BlogPost {
   createdAt: string;
 }
 
-export default function BlogClient() {
-  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+interface BlogClientProps {
+  initialBlogs: BlogPost[];
+}
+
+export default function BlogClient({ initialBlogs }: BlogClientProps) {
+  const [blogs, setBlogs] = useState<BlogPost[]>(initialBlogs);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Custom hover cursor state
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -29,25 +33,6 @@ export default function BlogClient() {
     };
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  useEffect(() => {
-    const fetchBlogs = async () => {
-      try {
-        const res = await fetch("/api/blog");
-        if (res.ok) {
-          const result = await res.json();
-          if (result.success && result.data) {
-            setBlogs(result.data);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching blogs:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBlogs();
   }, []);
 
   // Format date helper

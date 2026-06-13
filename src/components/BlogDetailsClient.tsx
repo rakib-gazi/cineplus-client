@@ -103,7 +103,7 @@ export default function BlogDetailsClient({ id }: BlogDetailsProps) {
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Blogs
           </Link>
           
-          <div className="space-y-2 max-w-4xl">
+          <div className="space-y-2 max-w-6xl">
             {/* Date Badge */}
             <div className="inline-flex items-center gap-2 text-[10px] md:text-xs font-bold text-white/55 uppercase tracking-widest bg-white/[0.04] border border-white/10 px-3 py-1 rounded-full">
               <Calendar className="h-3.5 w-3.5 text-primary" />
@@ -111,7 +111,7 @@ export default function BlogDetailsClient({ id }: BlogDetailsProps) {
             </div>
             
             {/* Title */}
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white leading-tight">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tight text-white leading-tight line-clamp-3">
               {blog.title}
             </h1>
           </div>
@@ -119,10 +119,10 @@ export default function BlogDetailsClient({ id }: BlogDetailsProps) {
       </div>
 
       {/* Main Content Article Container */}
-      <main className="max-w-[850px] mx-auto px-6 py-12 md:py-16 space-y-12">
+      <main className="max-w-[1200px] mx-auto px-6 py-12 md:py-16 space-y-12">
         {/* Rich HTML rendered content */}
         <div 
-          className="prose prose-invert max-w-none text-white/80 leading-relaxed font-sans text-sm md:text-base space-y-6 
+          className="prose prose-invert max-w-none text-white/80 leading-relaxed font-sans text-xs md:text-sm space-y-6 
             [&_a]:text-primary [&_a]:underline [&_a:hover]:text-white 
             [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 
             [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-2

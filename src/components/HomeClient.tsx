@@ -18,103 +18,36 @@ const MARQUEE_POSTERS = [
   "https://api.theviralfever.com/wp-content/uploads/2025/07/Screenshot-2025-07-05-at-13.29.43-1.webp",
 ];
 
-export default function HomeClient() {
-  const [selectedShow, setSelectedShow] = useState<any | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // Dynamic Hero Banner - Initialize to null, no hardcoded fallbacks
-  const [heroContent, setHeroContent] = useState<{
+interface HomeClientProps {
+  initialHero: {
     tag: string;
     title: string;
     shortDescription: string;
     link: string;
-  } | null>(null);
-  const [loadingHero, setLoadingHero] = useState(true);
+  } | null;
+  initialShows: any[];
+  initialChannels: any[];
+  initialGallery: string[];
+}
+
+export default function HomeClient({
+  initialHero,
+  initialShows,
+  initialChannels,
+  initialGallery,
+}: HomeClientProps) {
+  const [selectedShow, setSelectedShow] = useState<any | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
-  const [homepageShows, setHomepageShows] = useState<any[]>([]);
-  const [sisterChannels, setSisterChannels] = useState<any[]>([]);
-  const [loadingChannels, setLoadingChannels] = useState(true);
-  const [galleryPosters, setGalleryPosters] = useState<string[]>([]);
-  const [loadingGallery, setLoadingGallery] = useState(true);
-
-  useEffect(() => {
-    const fetchActiveHero = async () => {
-      try {
-        const res = await fetch("/api/hero/active");
-        if (res.ok) {
-          const result = await res.json();
-          if (result.success && result.active && result.data) {
-            setHeroContent({
-              tag: result.data.tag,
-              title: result.data.title,
-              shortDescription: result.data.shortDescription,
-              link: result.data.link
-            });
-          } else {
-            setHeroContent(null);
-          }
-        } else {
-          setHeroContent(null);
-        }
-      } catch (err) {
-        console.error("Error fetching active hero content:", err);
-        setHeroContent(null);
-      } finally {
-        setLoadingHero(false);
-      }
-    };
-
-    const fetchHomepageShows = async () => {
-      try {
-        const res = await fetch("/api/shows/homepage");
-        if (res.ok) {
-          const result = await res.json();
-          if (result.success && result.data) {
-            setHomepageShows(result.data);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching homepage shows:", err);
-      }
-    };
-
-    const fetchSisterChannels = async () => {
-      try {
-        const res = await fetch("/api/sister-channels");
-        if (res.ok) {
-          const result = await res.json();
-          if (result.success && result.data) {
-            setSisterChannels(result.data);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching sister channels:", err);
-      } finally {
-        setLoadingChannels(false);
-      }
-    };
-
-    const fetchGalleryPosters = async () => {
-      try {
-        const res = await fetch("/api/gallery");
-        if (res.ok) {
-          const result = await res.json();
-          if (result.success && result.data) {
-            setGalleryPosters(result.data.map((item: any) => item.url));
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching gallery posters:", err);
-      } finally {
-        setLoadingGallery(false);
-      }
-    };
-
-    fetchActiveHero();
-    fetchHomepageShows();
-    fetchSisterChannels();
-    fetchGalleryPosters();
-  }, []);
+  // Dynamic Hero Banner - Initialize with server props
+  const [heroContent, setHeroContent] = useState(initialHero);
+  const [loadingHero, setLoadingHero] = useState(false);
+  
+  const [homepageShows, setHomepageShows] = useState<any[]>(initialShows);
+  const [sisterChannels, setSisterChannels] = useState<any[]>(initialChannels);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+  const [galleryPosters, setGalleryPosters] = useState<string[]>(initialGallery);
+  const [loadingGallery, setLoadingGallery] = useState(false);
 
   const mappedDynamicShows = homepageShows.map((item) => ({
     title: item.title,

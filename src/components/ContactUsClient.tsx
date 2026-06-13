@@ -7,19 +7,19 @@ const CONTACT_DEPARTMENTS = [
   {
     title: "Hiring",
     subtitle: "Join the team, build stories",
-    email: "careers@cineplus.com",
+    email: "careers@cineplusstudio.com",
     icon: Briefcase,
   },
   {
     title: "Script Pitching",
     subtitle: "Pitch your story to us",
-    email: "scripts@cineplus.com",
+    email: "scripts@cineplusstudio.com",
     icon: FileText,
   },
   {
     title: "Business Enquiry",
     subtitle: "Partner with us for impactful storytelling",
-    email: "business@cineplus.com",
+    email: "business@cineplusstudio.com",
     icon: BarChart3,
   },
 ];
@@ -27,7 +27,7 @@ const CONTACT_DEPARTMENTS = [
 export default function ContactUsClient() {
   return (
     <div className="relative min-h-[calc(100vh-6rem)] bg-black text-white flex flex-col py-16 px-4 md:px-8 max-w-[1400px] mx-auto overflow-hidden">
-      
+
       {/* Background visual detail */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
@@ -50,7 +50,7 @@ export default function ContactUsClient() {
 
       {/* Main Grid Content */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start relative z-10">
-        
+
         {/* Left Column: Interactive Map */}
         <motion.div
           initial={{ opacity: 0, x: -30 }}

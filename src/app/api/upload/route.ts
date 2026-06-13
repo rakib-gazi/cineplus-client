@@ -2,13 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { verifyToken } from "@/lib/auth";
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
 export async function POST(req: NextRequest) {
   try {
     // 1. Authenticate admin
@@ -17,18 +10,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Parse form data
+    // 2. Validate and configure Cloudinary credentials dynamically
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      console.error("Missing Cloudinary environment variables:", {
+        hasCloudName: !!cloudName,
+        hasApiKey: !!apiKey,
+        hasApiSecret: !!apiSecret,
+      });
+      return NextResponse.json(
+        { error: "Cloudinary is not configured on the server. Please check environment variables." },
+        { status: 500 }
+      );
+    }
+
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+    });
+
+    // 3. Parse form data
     const formData = await req.formData();
     const file = formData.get("image") as File | null;
     if (!file) {
       return NextResponse.json({ error: "No image file uploaded" }, { status: 400 });
     }
 
-    // 3. Convert File to arrayBuffer then to Buffer
+    // 4. Convert File to arrayBuffer then to Buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 4. Upload buffer to Cloudinary using upload_stream
+    // 5. Upload buffer to Cloudinary using upload_stream
     const uploadResult = await new Promise<any>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {

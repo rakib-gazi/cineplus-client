@@ -11,17 +11,38 @@ export async function POST(req: Request) {
   try {
     await dbConnect();
 
-    // Auto-seed check: if admin collection is empty, seed one using environment variables
-    const count = await Admin.countDocuments();
-    if (count === 0) {
-      const seedEmail = process.env.INIT_ADMIN_EMAIL || "admin@tvf.com";
-      const seedPassword = process.env.INIT_ADMIN_PASSWORD || "adminpassword";
+    // Auto-seed check: sync admin credentials with environment variables if they change
+    const seedEmail = (process.env.INIT_ADMIN_EMAIL || "admin@tvf.com").toLowerCase();
+    const seedPassword = process.env.INIT_ADMIN_PASSWORD || "adminpassword";
+
+    const existingAdmin = await Admin.findOne({ email: seedEmail });
+    if (!existingAdmin) {
       const hashedPassword = await bcrypt.hash(seedPassword, 10);
-      await Admin.create({
-        email: seedEmail,
-        password: hashedPassword,
-      });
-      console.log(`Auto-seeded initial admin credentials: ${seedEmail}`);
+      const adminCount = await Admin.countDocuments();
+      if (adminCount > 0) {
+        // If an admin already exists under a different email, update it to match the new email and password
+        await Admin.updateOne({}, {
+          email: seedEmail,
+          password: hashedPassword
+        });
+        console.log(`Updated existing admin credentials to: ${seedEmail}`);
+      } else {
+        // Otherwise, create the initial admin
+        await Admin.create({
+          email: seedEmail,
+          password: hashedPassword,
+        });
+        console.log(`Auto-seeded initial admin credentials: ${seedEmail}`);
+      }
+    } else {
+      // If the admin exists, verify if the password matches. If not, update it.
+      const isPasswordMatch = await bcrypt.compare(seedPassword, existingAdmin.password);
+      if (!isPasswordMatch) {
+        const hashedPassword = await bcrypt.hash(seedPassword, 10);
+        existingAdmin.password = hashedPassword;
+        await existingAdmin.save();
+        console.log(`Updated password for admin: ${seedEmail}`);
+      }
     }
 
     const { email, password } = await req.json();

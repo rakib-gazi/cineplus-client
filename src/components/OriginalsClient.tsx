@@ -18,14 +18,18 @@ interface ExtendedShow extends Show {
 
 const CATEGORIES = ["All", "Drama", "Comedy", "Youth", "Family", "Romance", "Tech"];
 
-export default function OriginalsClient() {
+interface OriginalsClientProps {
+  initialShows: any[];
+}
+
+export default function OriginalsClient({ initialShows }: OriginalsClientProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedShow, setSelectedShow] = useState<ExtendedShow | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dbShows, setDbShows] = useState<any[]>([]);
+  const [dbShows, setDbShows] = useState<any[]>(initialShows);
 
   // Mouse position for custom cursor overlay
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -37,23 +41,6 @@ export default function OriginalsClient() {
     };
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  useEffect(() => {
-    const fetchAllShows = async () => {
-      try {
-        const res = await fetch("/api/shows");
-        if (res.ok) {
-          const result = await res.json();
-          if (result.success && result.data) {
-            setDbShows(result.data);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching all shows:", err);
-      }
-    };
-    fetchAllShows();
   }, []);
 
   const mappedDynamicShows = dbShows.map((item) => ({

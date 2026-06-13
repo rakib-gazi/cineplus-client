@@ -4,11 +4,12 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Plus, Edit2, Trash2, LayoutGrid, CheckCircle, 
+  Plus, Edit2, Trash2, LayoutGrid, Gauge, CheckCircle, 
   XCircle, ExternalLink, Sparkles, LogOut, ArrowLeft, RefreshCw,
   Film, Award, Star, Radio, Images, Newspaper, Bold, Italic, 
   Underline, List, ListOrdered, Heading2, Heading3, AlignLeft, 
-  AlignCenter, AlignRight, Link2, FileText, Image as ImageIcon
+  AlignCenter, AlignRight, Link2, FileText, Image as ImageIcon,
+  Building, Mail, Loader2
 } from "lucide-react";
 
 interface HeroContentItem {
@@ -60,11 +61,48 @@ interface GalleryItem {
   createdAt: string;
 }
 
+interface Brand {
+  name: string;
+  logo: string;
+  _id?: string;
+}
+
+interface BrandedCategoryItem {
+  _id: string;
+  name: string;
+  createdAt: string;
+}
+
+interface BrandedBrandItem {
+  _id: string;
+  name: string;
+  logo: string;
+  category: string | { _id: string; name: string };
+  createdAt: string;
+}
+
+interface PartnerInquiryItem {
+  _id: string;
+  name: string;
+  phone: string;
+  email: string;
+  institution?: string;
+  message: string;
+  createdAt: string;
+}
+
+interface UnusedImageItem {
+  public_id: string;
+  secure_url: string;
+  bytes: number;
+  created_at: string;
+}
+
 export default function AdminDashboardClient() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [adminEmail, setAdminEmail] = useState("");
-  const [activeTab, setActiveTab] = useState<"hero" | "content" | "sister-channels" | "gallery" | "blog">("hero");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "hero" | "content" | "sister-channels" | "gallery" | "blog" | "branded-content" | "partner-inquiries" | "unused-images">("dashboard");
   
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -906,6 +944,305 @@ export default function AdminDashboardClient() {
   };
 
   // ==========================================
+  // TAB 6: BRANDED CONTENT STATE & HANDLERS
+  // ==========================================
+  const [brandedCategories, setBrandedCategories] = useState<BrandedCategoryItem[]>([]);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [deleteConfirmCategoryId, setDeleteConfirmCategoryId] = useState<string | null>(null);
+  const [categoryName, setCategoryName] = useState("");
+  const [submittingCategory, setSubmittingCategory] = useState(false);
+
+  const [brandedBrands, setBrandedBrands] = useState<BrandedBrandItem[]>([]);
+  const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
+  const [deleteConfirmBrandId, setDeleteConfirmBrandId] = useState<string | null>(null);
+  const [brandName, setBrandName] = useState("");
+  const [brandLogo, setBrandLogo] = useState("");
+  const [brandCategoryId, setBrandCategoryId] = useState("");
+  const [uploadingBrandLogo, setUploadingBrandLogo] = useState(false);
+  const [submittingBrand, setSubmittingBrand] = useState(false);
+
+  // ==========================================
+  // TAB 7: PARTNER INQUIRIES STATE & HANDLERS
+  // ==========================================
+  const [partnerInquiries, setPartnerInquiries] = useState<PartnerInquiryItem[]>([]);
+  const [deleteConfirmInquiryId, setDeleteConfirmInquiryId] = useState<string | null>(null);
+  const [selectedInquiry, setSelectedInquiry] = useState<PartnerInquiryItem | null>(null);
+
+  const fetchBrandedCategories = async () => {
+    try {
+      const res = await fetch("/api/branded-content/category");
+      if (res.ok) {
+        const data = await res.json();
+        setBrandedCategories(data.data || []);
+      }
+    } catch (err) {
+      showToast("Failed to fetch branded categories", "error");
+    }
+  };
+
+  const fetchBrandedBrands = async () => {
+    try {
+      const res = await fetch("/api/branded-content/brand");
+      if (res.ok) {
+        const data = await res.json();
+        setBrandedBrands(data.data || []);
+      }
+    } catch (err) {
+      showToast("Failed to fetch branded brands", "error");
+    }
+  };
+
+  const fetchPartnerInquiries = async () => {
+    try {
+      const res = await fetch("/api/partner");
+      if (res.ok) {
+        const data = await res.json();
+        setPartnerInquiries(data.data || []);
+      }
+    } catch (err) {
+      showToast("Failed to fetch partner inquiries", "error");
+    }
+  };
+
+  const handleBrandLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingBrandLogo(true);
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setBrandLogo(data.url);
+        showToast("Brand logo uploaded successfully");
+      } else {
+        showToast(data.error || "Failed to upload brand logo", "error");
+      }
+    } catch (err) {
+      showToast("Logo upload network error", "error");
+    } finally {
+      setUploadingBrandLogo(false);
+    }
+  };
+
+  const handleCategoryFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingCategory(true);
+
+    if (!categoryName.trim()) {
+      showToast("Please enter a category name", "error");
+      setSubmittingCategory(false);
+      return;
+    }
+
+    try {
+      const url = editingCategoryId ? `/api/branded-content/category/${editingCategoryId}` : "/api/branded-content/category";
+      const method = editingCategoryId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: categoryName.trim() }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showToast(editingCategoryId ? "Category updated successfully" : "Category created successfully");
+        resetCategoryForm();
+        await fetchBrandedCategories();
+      } else {
+        showToast(data.error || "Operation failed", "error");
+      }
+    } catch (err) {
+      showToast("Connection error occurred", "error");
+    } finally {
+      setSubmittingCategory(false);
+    }
+  };
+
+  const handleBrandFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingBrand(true);
+
+    if (!brandName.trim() || !brandLogo || !brandCategoryId) {
+      showToast("Please fill out all fields (name, logo, category)", "error");
+      setSubmittingBrand(false);
+      return;
+    }
+
+    const payload = {
+      name: brandName.trim(),
+      logo: brandLogo,
+      category: brandCategoryId,
+    };
+
+    try {
+      const url = editingBrandId ? `/api/branded-content/brand/${editingBrandId}` : "/api/branded-content/brand";
+      const method = editingBrandId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showToast(editingBrandId ? "Brand updated successfully" : "Brand created successfully");
+        resetBrandForm();
+        await fetchBrandedBrands();
+      } else {
+        showToast(data.error || "Operation failed", "error");
+      }
+    } catch (err) {
+      showToast("Connection error occurred", "error");
+    } finally {
+      setSubmittingBrand(false);
+    }
+  };
+
+  const startCategoryEdit = (item: BrandedCategoryItem) => {
+    setEditingCategoryId(item._id);
+    setCategoryName(item.name);
+  };
+
+  const startBrandEdit = (item: BrandedBrandItem) => {
+    setEditingBrandId(item._id);
+    setBrandName(item.name);
+    setBrandLogo(item.logo);
+    const catId = typeof item.category === "object" ? item.category?._id : item.category;
+    setBrandCategoryId(catId || "");
+  };
+
+  const handleCategoryDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/branded-content/category/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Category deleted successfully");
+        if (editingCategoryId === id) resetCategoryForm();
+        setDeleteConfirmCategoryId(null);
+        await fetchBrandedCategories();
+      } else {
+        showToast(data.error || "Delete failed", "error");
+      }
+    } catch (err) {
+      showToast("Connection error occurred", "error");
+    }
+  };
+
+  const handleBrandDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/branded-content/brand/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        showToast("Brand deleted successfully");
+        if (editingBrandId === id) resetBrandForm();
+        setDeleteConfirmBrandId(null);
+        await fetchBrandedBrands();
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Delete failed", "error");
+      }
+    } catch (err) {
+      showToast("Connection error occurred", "error");
+    }
+  };
+
+  const resetCategoryForm = () => {
+    setCategoryName("");
+    setEditingCategoryId(null);
+  };
+
+  const resetBrandForm = () => {
+    setBrandName("");
+    setBrandLogo("");
+    setBrandCategoryId("");
+    setEditingBrandId(null);
+  };
+
+  const handleInquiryDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/partner/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        showToast("Inquiry dismissed successfully");
+        if (selectedInquiry?._id === id) setSelectedInquiry(null);
+        setDeleteConfirmInquiryId(null);
+        await fetchPartnerInquiries();
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Failed to dismiss inquiry", "error");
+      }
+    } catch (err) {
+      showToast("Connection error occurred", "error");
+    }
+  };
+
+  // ==========================================
+  // TAB 8: UNUSED IMAGES STATE & HANDLERS
+  // ==========================================
+  const [unusedImages, setUnusedImages] = useState<UnusedImageItem[]>([]);
+  const [selectedUnusedPids, setSelectedUnusedPids] = useState<string[]>([]);
+  const [deletingUnused, setDeletingUnused] = useState(false);
+  const [scanningUnused, setScanningUnused] = useState(false);
+
+  const fetchUnusedImages = async () => {
+    setScanningUnused(true);
+    try {
+      const res = await fetch("/api/unused-images");
+      if (res.ok) {
+        const data = await res.json();
+        setUnusedImages(data.data || []);
+        setSelectedUnusedPids([]);
+      }
+    } catch (err) {
+      showToast("Failed to fetch unused images", "error");
+    } finally {
+      setScanningUnused(false);
+    }
+  };
+
+  const handleDeleteUnusedImages = async (pids: string[]) => {
+    if (pids.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${pids.length} image(s) from Cloudinary?`)) return;
+
+    setDeletingUnused(true);
+    try {
+      const res = await fetch("/api/unused-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ public_ids: pids }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Deleted ${pids.length} image(s) successfully`);
+        await fetchUnusedImages();
+      } else {
+        showToast(data.error || "Failed to delete images", "error");
+      }
+    } catch (err) {
+      showToast("Connection error occurred", "error");
+    } finally {
+      setDeletingUnused(false);
+    }
+  };
+
+  const toggleUnusedSelection = (pid: string) => {
+    if (selectedUnusedPids.includes(pid)) {
+      setSelectedUnusedPids(selectedUnusedPids.filter((p) => p !== pid));
+    } else {
+      setSelectedUnusedPids([...selectedUnusedPids, pid]);
+    }
+  };
+
+  // ==========================================
   // INITIALIZATION & LOGOUT
   // ==========================================
   useEffect(() => {
@@ -924,6 +1261,10 @@ export default function AdminDashboardClient() {
         await fetchChannels();
         await fetchGallery();
         await fetchBlogs();
+        await fetchBrandedCategories();
+        await fetchBrandedBrands();
+        await fetchPartnerInquiries();
+        await fetchUnusedImages();
       } catch (err) {
         router.replace("/admin/login");
       } finally {
@@ -1063,6 +1404,16 @@ export default function AdminDashboardClient() {
           {/* Navigation Links */}
           <nav className="space-y-2">
             <button
+              onClick={() => setActiveTab("dashboard")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm uppercase tracking-wider transition-all cursor-pointer ${
+                activeTab === "dashboard" 
+                  ? "bg-primary/10 border border-primary/20 text-primary" 
+                  : "text-white/60 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Gauge className="h-4 w-4" /> Dashboard
+            </button>
+            <button
               onClick={() => setActiveTab("hero")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === "hero" 
@@ -1112,6 +1463,36 @@ export default function AdminDashboardClient() {
             >
               <Newspaper className="h-4 w-4" /> Blog Manager
             </button>
+            <button
+              onClick={() => setActiveTab("branded-content")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm uppercase tracking-wider transition-all cursor-pointer ${
+                activeTab === "branded-content" 
+                  ? "bg-primary/10 border border-primary/20 text-primary" 
+                  : "text-white/60 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Building className="h-4 w-4" /> Branded Content
+            </button>
+            <button
+              onClick={() => setActiveTab("partner-inquiries")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm uppercase tracking-wider transition-all cursor-pointer ${
+                activeTab === "partner-inquiries" 
+                  ? "bg-primary/10 border border-primary/20 text-primary" 
+                  : "text-white/60 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Mail className="h-4 w-4" /> Partner Inquiries
+            </button>
+            <button
+              onClick={() => setActiveTab("unused-images")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm uppercase tracking-wider transition-all cursor-pointer ${
+                activeTab === "unused-images" 
+                  ? "bg-primary/10 border border-primary/20 text-primary" 
+                  : "text-white/60 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Trash2 className="h-4 w-4" /> Unused Images
+            </button>
             <a 
               href="/"
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-all text-sm uppercase font-bold tracking-wider"
@@ -1153,15 +1534,21 @@ export default function AdminDashboardClient() {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => {
-                if (activeTab === "hero") setActiveTab("content");
+                if (activeTab === "dashboard") setActiveTab("hero");
+                else if (activeTab === "hero") setActiveTab("content");
                 else if (activeTab === "content") setActiveTab("sister-channels");
                 else if (activeTab === "sister-channels") setActiveTab("gallery");
                 else if (activeTab === "gallery") setActiveTab("blog");
-                else setActiveTab("hero");
+                else if (activeTab === "blog") setActiveTab("branded-content");
+                else if (activeTab === "branded-content") setActiveTab("partner-inquiries");
+                else if (activeTab === "partner-inquiries") setActiveTab("unused-images");
+                else setActiveTab("dashboard");
               }}
               className="text-white/60 hover:text-white transition-colors flex items-center gap-1"
             >
-              {activeTab === "hero" ? (
+              {activeTab === "dashboard" ? (
+                <LayoutGrid className="h-5 w-5" />
+              ) : activeTab === "hero" ? (
                 <Film className="h-5 w-5" />
               ) : activeTab === "content" ? (
                 <Radio className="h-5 w-5" />
@@ -1169,8 +1556,14 @@ export default function AdminDashboardClient() {
                 <Images className="h-5 w-5" />
               ) : activeTab === "gallery" ? (
                 <Newspaper className="h-5 w-5" />
+              ) : activeTab === "blog" ? (
+                <Building className="h-5 w-5" />
+              ) : activeTab === "branded-content" ? (
+                <Mail className="h-5 w-5" />
+              ) : activeTab === "partner-inquiries" ? (
+                <Trash2 className="h-5 w-5" />
               ) : (
-                <LayoutGrid className="h-5 w-5" />
+                <Gauge className="h-5 w-5" />
               )}
             </button>
             <a href="/" className="text-white/60 hover:text-white transition-colors">
@@ -1184,10 +1577,241 @@ export default function AdminDashboardClient() {
 
         {/* Inner Scrollable Workspace */}
         <main className="flex-grow p-6 md:p-10 overflow-y-auto max-w-[1500px] w-full mx-auto space-y-10">
-          
+
           {/* ======================================================== */}
-          {/* TAB 1: HERO SECTION MANAGER */}
+          {/* TAB 0: PROJECT SUMMARY DASHBOARD */}
           {/* ======================================================== */}
+          {activeTab === "dashboard" && (
+            <>
+              {/* Dashboard Header */}
+              <div className="pb-6 border-b border-white/5 space-y-2">
+                <h1 className="text-3xl font-extrabold uppercase tracking-tight text-white">
+                  Cineplus Studio Dashboard
+                </h1>
+                <p className="text-white/50 text-sm">
+                  Welcome back, administrator. Here is a live summary of your digital storytelling ecosystem.
+                </p>
+              </div>
+
+              {/* Stats Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                
+                {/* 1. Hero Content Card */}
+                <div 
+                  onClick={() => setActiveTab("hero")}
+                  className="rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-primary/30 transition-all p-6 space-y-4 cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                      <LayoutGrid className="h-6 w-6" />
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                      Landing Page Banner
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">Hero Section</h3>
+                    <p className="text-2xl font-black mt-1">
+                      {heroes.length} <span className="text-xs font-semibold text-white/50">Items ({heroes.filter(h => h.currentActiveOnLiveSite).length} Active)</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Content Manager Card */}
+                <div 
+                  onClick={() => setActiveTab("content")}
+                  className="rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-primary/30 transition-all p-6 space-y-4 cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                      <Film className="h-6 w-6" />
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                      Original Shows
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">Content Manager</h3>
+                    <p className="text-2xl font-black mt-1">
+                      {shows.length} <span className="text-xs font-semibold text-white/50">Shows ({shows.filter(s => s.homepageStatus).length} on Home)</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Sister Channels Card */}
+                <div 
+                  onClick={() => setActiveTab("sister-channels")}
+                  className="rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-primary/30 transition-all p-6 space-y-4 cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                      <Radio className="h-6 w-6" />
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                      Connected Channels
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">Sister Channels</h3>
+                    <p className="text-2xl font-black mt-1">
+                      {channels.length} <span className="text-xs font-semibold text-white/50">Connected</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* 4. Journey Timeline Gallery */}
+                <div 
+                  onClick={() => setActiveTab("gallery")}
+                  className="rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-primary/30 transition-all p-6 space-y-4 cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                      <Images className="h-6 w-6" />
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                      Timeline Journey
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">Gallery Manager</h3>
+                    <p className="text-2xl font-black mt-1">
+                      {gallery.length} <span className="text-xs font-semibold text-white/50">Images</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* 5. Blog Posts Card */}
+                <div 
+                  onClick={() => setActiveTab("blog")}
+                  className="rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-primary/30 transition-all p-6 space-y-4 cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                      <Newspaper className="h-6 w-6" />
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                      Articles & News
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">Blog Manager</h3>
+                    <p className="text-2xl font-black mt-1">
+                      {blogs.length} <span className="text-xs font-semibold text-white/50">Articles</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* 6. Branded Content Card */}
+                <div 
+                  onClick={() => setActiveTab("branded-content")}
+                  className="rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-primary/30 transition-all p-6 space-y-4 cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                      <Building className="h-6 w-6" />
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                      Partner Brands
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">Branded Content</h3>
+                    <p className="text-2xl font-black mt-1">
+                      {brandedBrands.length} <span className="text-xs font-semibold text-white/50">Brands ({brandedCategories.length} Categories)</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* 7. Partner Inquiries Card */}
+                <div 
+                  onClick={() => setActiveTab("partner-inquiries")}
+                  className="rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-primary/30 transition-all p-6 space-y-4 cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                      <Mail className="h-6 w-6" />
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                      Form Submissions
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">Partner Inquiries</h3>
+                    <p className="text-2xl font-black mt-1">
+                      {partnerInquiries.length} <span className="text-xs font-semibold text-white/50">Messages</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* 8. Unused Images Card */}
+                <div 
+                  onClick={() => setActiveTab("unused-images")}
+                  className="rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-primary/30 transition-all p-6 space-y-4 cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                      <Trash2 className="h-6 w-6" />
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                      Cloud Cleanup
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">Unused Images</h3>
+                    <p className="text-2xl font-black mt-1">
+                      {unusedImages.length} <span className="text-xs font-semibold text-white/50">Unlinked Assets</span>
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Quick Actions Panel */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl p-6 md:p-8 space-y-6">
+                <div className="border-b border-white/5 pb-4">
+                  <h3 className="text-lg font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Quick Actions & Shortcuts
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <button 
+                    onClick={() => setActiveTab("content")}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl border border-white/5 hover:border-primary/45 bg-white/[0.02] hover:bg-white/[0.05] text-sm font-semibold text-white transition-all cursor-pointer"
+                  >
+                    <span>Add Show Original</span>
+                    <Plus className="h-4 w-4 text-primary" />
+                  </button>
+
+                  <button 
+                    onClick={() => setActiveTab("blog")}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl border border-white/5 hover:border-primary/45 bg-white/[0.02] hover:bg-white/[0.05] text-sm font-semibold text-white transition-all cursor-pointer"
+                  >
+                    <span>Write Blog Post</span>
+                    <Plus className="h-4 w-4 text-primary" />
+                  </button>
+
+                  <button 
+                    onClick={() => setActiveTab("unused-images")}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl border border-white/5 hover:border-primary/45 bg-white/[0.02] hover:bg-white/[0.05] text-sm font-semibold text-white transition-all cursor-pointer"
+                  >
+                    <span>Scan Cloud Assets</span>
+                    <RefreshCw className="h-4 w-4 text-primary" />
+                  </button>
+
+                  <a 
+                    href="/"
+                    className="flex items-center justify-between px-4 py-3 rounded-xl border border-white/5 hover:border-primary/45 bg-white/[0.02] hover:bg-white/[0.05] text-sm font-semibold text-white transition-all cursor-pointer"
+                  >
+                    <span>Go to Live Site</span>
+                    <ExternalLink className="h-4 w-4 text-primary" />
+                  </a>
+                </div>
+              </div>
+            </>
+          )}
+
           {activeTab === "hero" && (
             <>
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
@@ -3037,6 +3661,677 @@ export default function AdminDashboardClient() {
                   )}
                 </div>
               </div>
+            </>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 6: BRANDED CONTENT MANAGER */}
+          {/* ======================================================== */}
+          {activeTab === "branded-content" && (
+            <>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+                <div>
+                  <h1 className="text-3xl font-extrabold uppercase tracking-tight text-white mb-2">
+                    Branded Content Manager
+                  </h1>
+                  <p className="text-white/50 text-sm">
+                    Manage branded categories and partner brand logos shown on the live site.
+                  </p>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="px-5 py-3.5 rounded-xl border border-white/5 bg-white/[0.02] text-center min-w-[120px]">
+                    <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Categories</p>
+                    <p className="text-2xl font-extrabold text-white">{brandedCategories.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+                {/* Form to create/edit category */}
+                <div className="xl:col-span-5 space-y-6">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl p-6 md:p-8 space-y-6">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                      <h3 className="text-lg font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                        <Plus className="h-4 w-4 text-primary" />
+                        {editingCategoryId ? "Modify Category" : "Create Category"}
+                      </h3>
+                      {editingCategoryId && (
+                        <button
+                          onClick={resetCategoryForm}
+                          className="text-xs font-bold text-white/40 hover:text-primary uppercase tracking-wider cursor-pointer"
+                        >
+                          Cancel Edit
+                        </button>
+                      )}
+                    </div>
+
+                    <form onSubmit={handleCategoryFormSubmit} className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+                          Category Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={categoryName}
+                          onChange={(e) => setCategoryName(e.target.value)}
+                          placeholder="e.g. Consumer Electronics"
+                          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-primary transition-colors text-sm font-medium"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={submittingCategory}
+                        className="w-full py-3.5 rounded-lg bg-primary hover:bg-white text-black font-bold text-sm uppercase tracking-wider transition-all hover:scale-[1.01] flex items-center justify-center gap-2 shadow-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {submittingCategory ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-black" />
+                        ) : editingCategoryId ? (
+                          "Update Category"
+                        ) : (
+                          "Create Category"
+                        )}
+                      </button>
+                    </form>
+
+                    {/* Brand Manager section */}
+                    <div className="border-t border-white/10 pt-6 mt-6 space-y-6">
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <h3 className="text-lg font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                          <Plus className="h-4 w-4 text-primary" />
+                          {editingBrandId ? "Modify Brand" : "Create Brand"}
+                        </h3>
+                        {editingBrandId && (
+                          <button
+                            onClick={resetBrandForm}
+                            className="text-xs font-bold text-white/40 hover:text-primary uppercase tracking-wider cursor-pointer"
+                          >
+                            Cancel Edit
+                          </button>
+                        )}
+                      </div>
+
+                      <form onSubmit={handleBrandFormSubmit} className="space-y-5">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+                            Brand Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={brandName}
+                            onChange={(e) => setBrandName(e.target.value)}
+                            placeholder="e.g. LG"
+                            className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-primary transition-colors text-sm font-medium"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+                            Select Category *
+                          </label>
+                          <select
+                            required
+                            value={brandCategoryId}
+                            onChange={(e) => setBrandCategoryId(e.target.value)}
+                            className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-primary transition-colors text-sm font-medium cursor-pointer"
+                          >
+                            <option value="" className="bg-black text-white/40">-- Choose Category --</option>
+                            {brandedCategories.map((cat) => (
+                              <option key={cat._id} value={cat._id} className="bg-black text-white">
+                                {cat.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/60 block">
+                            Brand Logo Image *
+                          </label>
+                          <div className="flex items-center gap-4">
+                            {brandLogo ? (
+                              <div className="relative w-16 h-16 rounded-lg bg-white border border-white/10 overflow-hidden flex-shrink-0">
+                                <img
+                                  src={brandLogo}
+                                  alt="Brand Logo"
+                                  className="w-full h-full object-contain p-2"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setBrandLogo("")}
+                                  className="absolute inset-0 bg-black/75 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-xs text-red-500 font-extrabold uppercase"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ) : (
+                              <label className="w-16 h-16 rounded-lg border border-dashed border-white/20 hover:border-primary/50 flex flex-col items-center justify-center text-white/40 hover:text-primary transition-colors cursor-pointer bg-white/[0.01] flex-shrink-0">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  disabled={uploadingBrandLogo}
+                                  onChange={handleBrandLogoUpload}
+                                  className="hidden"
+                                />
+                                {uploadingBrandLogo ? (
+                                  <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                  <ImageIcon className="h-5 w-5" />
+                                )}
+                              </label>
+                            )}
+                            <p className="text-[11px] text-white/40 leading-relaxed">
+                              Upload PNG/WebP/SVG logo.
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={submittingBrand || uploadingBrandLogo}
+                          className="w-full py-3.5 rounded-lg bg-primary hover:bg-white text-black font-bold text-sm uppercase tracking-wider transition-all hover:scale-[1.01] flex items-center justify-center gap-2 shadow-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {submittingBrand ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-black" />
+                          ) : editingBrandId ? (
+                            "Update Brand"
+                          ) : (
+                            "Create Brand"
+                          )}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Categories and Brands Directories */}
+                <div className="xl:col-span-7 space-y-8">
+                  {/* Categories List */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                      <h3 className="text-lg font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                        Categories Directory ({brandedCategories.length})
+                        <button
+                          onClick={fetchBrandedCategories}
+                          className="p-1 rounded hover:bg-white/5 text-white/50 hover:text-white transition-colors cursor-pointer"
+                          type="button"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        </button>
+                      </h3>
+                    </div>
+
+                    {brandedCategories.length === 0 ? (
+                      <div className="rounded-xl border border-white/5 bg-white/[0.01] p-8 text-center text-white/40">
+                        <p className="text-xs font-semibold uppercase tracking-wider">No categories found</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[250px] overflow-y-auto pr-1">
+                        {brandedCategories.map((item) => (
+                          <div
+                            key={item._id}
+                            className="rounded-lg border border-white/5 p-3.5 bg-white/[0.01] hover:bg-white/[0.02] transition-all flex items-center justify-between gap-3"
+                          >
+                            <span className="text-sm font-bold text-white uppercase tracking-wider truncate">
+                              {item.name}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => startCategoryEdit(item)}
+                                className={`p-1.5 rounded border border-white/5 bg-white/[0.02] text-white/70 hover:text-primary transition-all cursor-pointer ${
+                                  editingCategoryId === item._id ? "border-primary text-primary" : ""
+                                }`}
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </button>
+                              {deleteConfirmCategoryId === item._id ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleCategoryDelete(item._id)}
+                                    className="px-2 py-0.5 rounded bg-primary text-black font-extrabold text-[9px] uppercase"
+                                  >
+                                    Yes
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirmCategoryId(null)}
+                                    className="p-0.5 rounded border border-white/10 text-white/60 hover:text-white"
+                                  >
+                                    <XCircle className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setDeleteConfirmCategoryId(item._id)}
+                                  className="p-1.5 rounded border border-white/5 bg-white/[0.02] text-white/70 hover:text-primary transition-all cursor-pointer"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Brands List */}
+                  <div className="space-y-4 pt-4 border-t border-white/5">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                      <h3 className="text-lg font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                        Brands Directory ({brandedBrands.length})
+                        <button
+                          onClick={fetchBrandedBrands}
+                          className="p-1 rounded hover:bg-white/5 text-white/50 hover:text-white transition-colors cursor-pointer"
+                          type="button"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        </button>
+                      </h3>
+                    </div>
+
+                    {brandedBrands.length === 0 ? (
+                      <div className="rounded-xl border border-white/5 bg-white/[0.01] p-12 text-center text-white/40">
+                        <p className="text-xs font-semibold uppercase tracking-wider">No brands found</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                        {brandedBrands.map((brand) => {
+                          const catName = typeof brand.category === "object" ? brand.category?.name : "";
+                          return (
+                            <div
+                              key={brand._id}
+                              className="rounded-lg border border-white/5 p-4 bg-white/[0.01] hover:bg-white/[0.02] flex items-center justify-between gap-4"
+                            >
+                              <div className="flex items-center gap-3.5 min-w-0">
+                                <div className="relative w-12 h-12 rounded bg-white overflow-hidden shrink-0 border border-white/10 p-1">
+                                  <img
+                                    src={brand.logo}
+                                    alt={brand.name}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="text-sm font-bold text-white uppercase tracking-wider truncate">
+                                    {brand.name}
+                                  </h4>
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded mt-1 inline-block">
+                                    {catName || "Unassigned"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  onClick={() => startBrandEdit(brand)}
+                                  className={`p-2 rounded border border-white/5 bg-white/[0.02] text-white/70 hover:text-primary transition-all cursor-pointer ${
+                                    editingBrandId === brand._id ? "border-primary text-primary" : ""
+                                  }`}
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                                {deleteConfirmBrandId === brand._id ? (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => handleBrandDelete(brand._id)}
+                                      className="px-2 py-1 rounded bg-primary text-black font-extrabold text-[9px] uppercase cursor-pointer"
+                                    >
+                                      Confirm
+                                    </button>
+                                    <button
+                                      onClick={() => setDeleteConfirmBrandId(null)}
+                                      className="p-1 rounded border border-white/10 text-white/60 hover:text-white cursor-pointer"
+                                    >
+                                      <XCircle className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setDeleteConfirmBrandId(brand._id)}
+                                    className="p-2 rounded border border-white/5 bg-white/[0.02] text-white/70 hover:text-primary transition-all cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 7: PARTNER INQUIRIES */}
+          {/* ======================================================== */}
+          {activeTab === "partner-inquiries" && (
+            <>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+                <div>
+                  <h1 className="text-3xl font-extrabold uppercase tracking-tight text-white mb-2">
+                    Partner Enquiries
+                  </h1>
+                  <p className="text-white/50 text-sm">
+                    View campaign proposals and partnership inquiries submitted by brands.
+                  </p>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="px-5 py-3.5 rounded-xl border border-white/5 bg-white/[0.02] text-center min-w-[120px]">
+                    <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Total Submissions</p>
+                    <p className="text-2xl font-extrabold text-white">{partnerInquiries.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              {partnerInquiries.length === 0 ? (
+                <div className="rounded-2xl border border-white/5 bg-white/[0.01] p-16 text-center text-white/40 space-y-2 max-w-lg mx-auto">
+                  <Mail className="h-8 w-8 mx-auto text-white/20 mb-2" />
+                  <p className="font-semibold uppercase tracking-wider text-sm">No enquiries found</p>
+                  <p className="text-xs">Incoming submissions from the &apos;Partner With Us&apos; form will show up here.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {partnerInquiries.map((inquiry) => (
+                    <div
+                      key={inquiry._id}
+                      className="rounded-xl border border-white/5 p-5 bg-white/[0.01] hover:bg-white/[0.02] transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+                    >
+                      <div className="space-y-1.5 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-sm font-bold text-white uppercase tracking-wide">
+                            {inquiry.name}
+                          </h4>
+                          {inquiry.institution && (
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-white/5 border border-white/10 px-2 py-0.5 rounded text-white/70">
+                              {inquiry.institution}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-white/60 flex flex-wrap items-center gap-x-4 gap-y-1">
+                          <span className="flex items-center gap-1"><Mail className="h-3 w-3 text-primary" /> {inquiry.email}</span>
+                          <span className="flex items-center gap-1"><Radio className="h-3 w-3 text-primary" /> {inquiry.phone}</span>
+                          <span className="text-white/40 font-bold uppercase tracking-widest text-[9px]">
+                            {new Date(inquiry.createdAt).toLocaleString()}
+                          </span>
+                        </p>
+                        <p className="text-xs text-white/80 line-clamp-1 italic mt-1 max-w-3xl">
+                          &ldquo;{inquiry.message}&rdquo;
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0 self-end md:self-auto">
+                        <button
+                          onClick={() => setSelectedInquiry(inquiry)}
+                          className="px-3 py-1.5 rounded-lg border border-white/5 hover:border-white/20 bg-white/[0.02] hover:bg-white/[0.06] text-xs font-bold uppercase tracking-wide text-white cursor-pointer transition-all"
+                        >
+                          View Details
+                        </button>
+
+                        {deleteConfirmInquiryId === inquiry._id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleInquiryDelete(inquiry._id)}
+                              className="px-2 py-1 rounded bg-primary hover:bg-white text-black font-extrabold text-[9px] uppercase tracking-wider cursor-pointer"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmInquiryId(null)}
+                              className="p-1 rounded border border-white/10 text-white/60 hover:text-white cursor-pointer"
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteConfirmInquiryId(inquiry._id)}
+                            className="p-2.5 rounded-lg border border-white/5 hover:border-primary/40 bg-white/[0.02] hover:bg-primary/10 text-white/70 hover:text-primary transition-all cursor-pointer"
+                            title="Dismiss Enquiry"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Inquiry Detail Inspection Popup Modal */}
+              <AnimatePresence>
+                {selectedInquiry && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                      className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                      onClick={() => setSelectedInquiry(null)}
+                    />
+                    <div className="relative w-full max-w-lg bg-neutral-900 border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl z-10 space-y-6">
+                      <div className="flex justify-between items-start border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="text-lg font-black uppercase text-white tracking-wide">
+                            {selectedInquiry.name}
+                          </h3>
+                          <p className="text-[10px] text-white/40 uppercase mt-0.5 font-bold tracking-widest">
+                            Submitted on {new Date(selectedInquiry.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedInquiry(null)}
+                          className="p-1 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <p className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Email</p>
+                            <p className="text-xs text-white/80 font-semibold select-all">{selectedInquiry.email}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Phone</p>
+                            <p className="text-xs text-white/80 font-semibold select-all">{selectedInquiry.phone}</p>
+                          </div>
+                        </div>
+
+                        {selectedInquiry.institution && (
+                          <div className="space-y-1">
+                            <p className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Institution / Brand</p>
+                            <p className="text-xs text-white/80 font-semibold">{selectedInquiry.institution}</p>
+                          </div>
+                        )}
+
+                        <div className="space-y-1 pt-3 border-t border-white/5">
+                          <p className="text-[9px] uppercase tracking-widest text-white/40 font-bold mb-1.5">Partnership Objectives</p>
+                          <p className="text-xs text-white/75 leading-relaxed bg-black/40 border border-white/5 p-4 rounded-xl font-sans whitespace-pre-wrap select-all">
+                            {selectedInquiry.message}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                        <a
+                          href={`mailto:${selectedInquiry.email}`}
+                          className="px-4 py-2.5 rounded-lg bg-primary hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider transition-all"
+                        >
+                          Reply via Email
+                        </a>
+                        <button
+                          onClick={() => setSelectedInquiry(null)}
+                          className="px-4 py-2.5 rounded-lg border border-white/10 text-white/70 hover:text-white hover:bg-white/10 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                        >
+                          Close Details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 8: UNUSED IMAGES MANAGER */}
+          {/* ======================================================== */}
+          {activeTab === "unused-images" && (
+            <>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+                <div>
+                  <h1 className="text-3xl font-extrabold uppercase tracking-tight text-white mb-2">
+                    Unused Images
+                  </h1>
+                  <p className="text-white/50 text-sm">
+                    Scan and delete images uploaded to Cloudinary that are no longer used anywhere.
+                  </p>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Stats */}
+                  <div className="px-4 py-2 rounded-lg border border-white/5 bg-white/[0.02] text-xs font-bold">
+                    <span className="text-white/40 uppercase tracking-wider block text-[9px] mb-0.5">Total Size</span>
+                    <span className="text-white">
+                      {(
+                        unusedImages.reduce((sum, img) => sum + img.bytes, 0) /
+                        (1024 * 1024)
+                      ).toFixed(2)}{" "}
+                      MB
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={fetchUnusedImages}
+                    disabled={scanningUnused}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/10 hover:border-primary text-xs uppercase font-extrabold tracking-wider text-white hover:bg-white/5 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${scanningUnused ? "animate-spin text-primary" : ""}`} />
+                    {scanningUnused ? "Scanning..." : "Rescan Images"}
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteUnusedImages(selectedUnusedPids)}
+                    disabled={selectedUnusedPids.length === 0 || deletingUnused}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-white text-xs uppercase font-extrabold tracking-wider text-black transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    {deletingUnused ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-black" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-3.5 w-3.5 text-black" />
+                        Delete Selected ({selectedUnusedPids.length})
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {scanningUnused ? (
+                <div className="flex flex-col items-center justify-center gap-4 py-24">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  <p className="text-xs uppercase font-extrabold tracking-widest text-white/40 animate-pulse">
+                    Scanning Cloudinary assets & Database records...
+                  </p>
+                </div>
+              ) : unusedImages.length === 0 ? (
+                <div className="rounded-2xl border border-white/5 bg-white/[0.01] p-16 text-center text-white/40 space-y-2 max-w-lg mx-auto">
+                  <CheckCircle className="h-8 w-8 mx-auto text-green-500 mb-2" />
+                  <p className="font-semibold uppercase tracking-wider text-sm text-white">All images are in use!</p>
+                  <p className="text-xs">Zero unused image files were found in folder &apos;tvf-clone/&apos;.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Select All Row */}
+                  <div className="flex items-center justify-between py-2 px-4 rounded-lg bg-white/[0.02] border border-white/5 text-xs text-white/60">
+                    <label className="flex items-center gap-2.5 cursor-pointer font-bold uppercase tracking-wider text-[10px]">
+                      <input
+                        type="checkbox"
+                        checked={selectedUnusedPids.length === unusedImages.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedUnusedPids(unusedImages.map((img) => img.public_id));
+                          } else {
+                            setSelectedUnusedPids([]);
+                          }
+                        }}
+                        className="rounded border-white/20 bg-black text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                      />
+                      Select All ({unusedImages.length} images found)
+                    </label>
+                  </div>
+
+                  {/* Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                    {unusedImages.map((item) => {
+                      const filename = item.public_id.split("/").pop();
+                      const fileSize = (item.bytes / 1024).toFixed(1) + " KB";
+                      const isSelected = selectedUnusedPids.includes(item.public_id);
+                      
+                      return (
+                        <div
+                          key={item.public_id}
+                          onClick={() => toggleUnusedSelection(item.public_id)}
+                          className={`group relative rounded-xl border p-3.5 bg-white/[0.01] hover:bg-white/[0.02] transition-all flex flex-col justify-between gap-3.5 cursor-pointer ${
+                            isSelected ? "border-primary/50 bg-primary/[0.02]" : "border-white/5"
+                          }`}
+                        >
+                          {/* Image Thumbnail */}
+                          <div className="relative aspect-video w-full rounded-lg overflow-hidden border border-white/10 bg-neutral-900 group-hover:border-white/20 transition-colors">
+                            <img
+                              src={item.secure_url}
+                              alt={filename}
+                              className="object-cover w-full h-full"
+                            />
+                            
+                            {/* Checkbox overlay */}
+                            <div className="absolute top-2 left-2 z-10">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}} // handled by parent onClick
+                                className="rounded border-white/20 bg-black/55 text-primary focus:ring-primary h-4.5 w-4.5 cursor-pointer shadow-lg"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Meta */}
+                          <div className="space-y-1 min-w-0">
+                            <h4 className="text-xs font-bold text-white uppercase tracking-wider truncate" title={filename}>
+                              {filename}
+                            </h4>
+                            <p className="text-[10px] text-white/40 flex items-center justify-between font-medium">
+                              <span>{fileSize}</span>
+                              <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                            </p>
+                          </div>
+
+                          {/* Individual Delete overlay */}
+                          <div className="absolute bottom-11 right-3.5 opacity-0 group-hover:opacity-100 transition-opacity z-15">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteUnusedImages([item.public_id]);
+                              }}
+                              className="p-2 rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-xl hover:scale-105 transition-all cursor-pointer"
+                              title="Delete permanently"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-white" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
