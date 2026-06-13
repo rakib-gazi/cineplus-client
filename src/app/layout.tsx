@@ -3,16 +3,19 @@ import "./globals.css";
 import ClientLayout from "@/components/ClientLayout";
 
 export const metadata: Metadata = {
-  title: "Cine Plus Studio",
+  title: {
+    default: "Cineplus Studio",
+    template: "%s | Cineplus Studio",
+  },
   description:
-    "The Viral Fever (TVF) is one of India's most popular and critically acclaimed content brands. Since its inception in 2012, TVF has consistently delivered original content that breaks stereotypes and resonates with millions, striking a balance between youth-centric storytelling and family-friendly entertainment.",
+    "Cineplus Studio is a premier digital storytelling powerhouse. We deliver gripping original series, youth-centric dramas, and family comedy shows.",
   keywords:
-    "TVF, viral fever, shows, brand, the timeliners, the screen patti, girliyapa, panchayat, gullak, kota factory, sketches, reels, partnerships",
+    "Cineplus, Cineplus Studio, shows, brand, series, originals, drama, comedy, panchayat, gullak, kota factory, web series, partner",
   openGraph: {
-    title: "Cine Plus Studio",
+    title: "Cineplus Studio",
     description:
-      "The Viral Fever (TVF) is one of India's most popular and critically acclaimed content brands.",
-    siteName: "The Viral Fever",
+      "Cineplus Studio is a premier digital storytelling powerhouse.",
+    siteName: "Cineplus Studio",
     locale: "en_US",
     images: [
       {
@@ -26,9 +29,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cine Plus Studio",
+    title: "Cineplus Studio",
     description:
-      "The Viral Fever (TVF) is one of India's most popular and critically acclaimed content brands.",
+      "Cineplus Studio is a premier digital storytelling powerhouse.",
     images: ["/logo.png"],
   },
   icons: {

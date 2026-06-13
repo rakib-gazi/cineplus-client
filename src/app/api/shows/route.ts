@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
     const { 
       title, dramaType, showDramaType, shortDescription, 
       awardWinnerCategory, awardGivenInstitution, showAwards, 
-      imdbScore, showImdbScore, link, image, homepageStatus 
+      imdbScore, showImdbScore, link, image, homepageStatus,
+      cast
     } = body;
 
     if (!title || !shortDescription || !link || !image) {
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
       link,
       image,
       homepageStatus: !!homepageStatus,
+      cast: cast || [],
     });
 
     return NextResponse.json({ success: true, data: newShow });

@@ -12,13 +12,14 @@ const NAV_LINKS = [
   { title: "About Us", url: "/#about" },
   { title: "Originals", url: "/originals" },
   { title: "Branded Content", url: "/branded-content" },
+  { title: "Blog", url: "/blog" },
   { title: "Contact Us", url: "/contact-us" },
 ];
 
 const SOCIAL_LINKS = [
   {
     name: "Youtube",
-    url: "https://www.youtube.com/@TheViralFever",
+    url: "https://www.youtube.com/@cineplusbd",
     svg: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -33,7 +34,7 @@ const SOCIAL_LINKS = [
   },
   {
     name: "Facebook",
-    url: "https://www.facebook.com/TheViralFever/",
+    url: "https://www.facebook.com/cinepluse",
     svg: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -48,7 +49,7 @@ const SOCIAL_LINKS = [
   },
   {
     name: "Instagram",
-    url: "https://www.instagram.com/theviralfever",
+    url: "https://www.instagram.com/cineplusbd",
     svg: (
       <svg
         xmlns="http://www.w3.org/2000/svg"

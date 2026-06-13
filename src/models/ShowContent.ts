@@ -1,5 +1,22 @@
 import mongoose from "mongoose";
 
+const CastMemberSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  role: {
+    type: String,
+    trim: true,
+  },
+  image: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+});
+
 const ShowContentSchema = new mongoose.Schema(
   {
     title: {
@@ -58,6 +75,10 @@ const ShowContentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    cast: {
+      type: [CastMemberSchema],
+      default: [],
+    },
   },
   {
     timestamps: true,
@@ -66,3 +87,4 @@ const ShowContentSchema = new mongoose.Schema(
 
 // Prevent compiling model again if it exists
 export const ShowContent = mongoose.models.ShowContent || mongoose.model("ShowContent", ShowContentSchema);
+
