@@ -15,8 +15,8 @@ export const metadata: Metadata = {
 export default async function Page() {
   await dbConnect();
 
-  // Fetch all shows on the server
-  const rawShows = await ShowContent.find().lean();
+  // Fetch all shows on the server (newest first)
+  const rawShows = await ShowContent.find().sort({ createdAt: -1 }).lean();
   const serializableShows = rawShows.map((show: any) => ({
     _id: show._id.toString(),
     title: show.title,

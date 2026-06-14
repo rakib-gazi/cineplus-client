@@ -28,8 +28,8 @@ export default async function Page() {
     link: rawHero.link,
   } : null;
 
-  // Fetch homepage shows
-  const rawShows = await ShowContent.find({ homepageStatus: true }).lean();
+  // Fetch homepage shows (newest first)
+  const rawShows = await ShowContent.find({ homepageStatus: true }).sort({ createdAt: -1 }).lean();
   const homepageShows = rawShows.map((show: any) => ({
     _id: show._id.toString(),
     title: show.title,
