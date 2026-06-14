@@ -1,4 +1,5 @@
 import { dbConnect } from "@/lib/db";
+export const dynamic = "force-dynamic";
 import { BlogPost } from "@/models/BlogPost";
 import BlogDetailsClient from "@/components/BlogDetailsClient";
 import type { Metadata } from "next";

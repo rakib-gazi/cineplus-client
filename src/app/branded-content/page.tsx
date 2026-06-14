@@ -1,5 +1,7 @@
 import BrandedContentClient from "@/components/BrandedContentClient";
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 import { dbConnect } from "@/lib/db";
 import { BrandedCategory } from "@/models/BrandedCategory";
 import { BrandedBrand } from "@/models/BrandedBrand";

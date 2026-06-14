@@ -1,5 +1,7 @@
 import OriginalsClient from "@/components/OriginalsClient";
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 import { dbConnect } from "@/lib/db";
 import { ShowContent } from "@/models/ShowContent";
 

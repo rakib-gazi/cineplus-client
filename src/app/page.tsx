@@ -1,5 +1,7 @@
 import HomeClient from "@/components/HomeClient";
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 import { dbConnect } from "@/lib/db";
 import { HeroContent } from "@/models/HeroContent";
 import { ShowContent } from "@/models/ShowContent";
