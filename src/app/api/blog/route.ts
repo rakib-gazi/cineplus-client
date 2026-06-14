@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/db";
 import { BlogPost } from "@/models/BlogPost";
 import { verifyToken } from "@/lib/auth";
+import { generateUniqueSlug } from "@/lib/slug";
 
 // GET /api/blog - Get all blog posts (sorted by blogdate descending / newest first)
 export async function GET() {
@@ -33,9 +34,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const slug = await generateUniqueSlug(title);
+
     const newBlog = await BlogPost.create({
       banner,
       title,
+      slug,
       blogdate: blogdate ? new Date(blogdate) : new Date(),
       content,
     });

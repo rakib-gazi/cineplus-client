@@ -21,6 +21,7 @@ export default async function Page() {
     _id: blog._id.toString(),
     banner: blog.banner,
     title: blog.title,
+    slug: blog.slug || blog._id.toString(),
     blogdate: blog.blogdate,
     content: blog.content,
     createdAt: blog.createdAt.toISOString(),

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/db";
 import { BlogPost } from "@/models/BlogPost";
 import { verifyToken } from "@/lib/auth";
+import { generateUniqueSlug } from "@/lib/slug";
 
 export async function GET(
   req: NextRequest,
@@ -11,9 +12,25 @@ export async function GET(
     const { id } = await params;
     await dbConnect();
     
-    const blog = await BlogPost.findById(id);
+    let blog = null;
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+    
+    if (isValidObjectId) {
+      blog = await BlogPost.findById(id);
+    }
+    
+    if (!blog) {
+      blog = await BlogPost.findOne({ slug: id });
+    }
+    
     if (!blog) {
       return NextResponse.json({ error: "Blog post not found" }, { status: 404 });
+    }
+
+    // Auto-generate slug on the fly if it is missing (lazy migration)
+    if (!blog.slug) {
+      blog.slug = await generateUniqueSlug(blog.title, blog._id.toString());
+      await blog.save();
     }
     
     return NextResponse.json({ success: true, data: blog });
@@ -45,20 +62,28 @@ export async function PUT(
       );
     }
 
+    const existingBlog = await BlogPost.findById(id);
+    if (!existingBlog) {
+      return NextResponse.json({ error: "Blog post not found" }, { status: 404 });
+    }
+
+    // Regenerate slug if title changes or slug is missing
+    let slug = existingBlog.slug;
+    if (!slug || existingBlog.title !== title) {
+      slug = await generateUniqueSlug(title, id);
+    }
+
     const updatedBlog = await BlogPost.findByIdAndUpdate(
       id,
       {
         banner,
         title,
+        slug,
         blogdate: blogdate ? new Date(blogdate) : new Date(),
         content,
       },
       { new: true }
     );
-
-    if (!updatedBlog) {
-      return NextResponse.json({ error: "Blog post not found" }, { status: 404 });
-    }
 
     return NextResponse.json({ success: true, data: updatedBlog });
   } catch (error: any) {

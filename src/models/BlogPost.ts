@@ -12,6 +12,12 @@ const BlogPostSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    slug: {
+      type: String,
+      unique: true,
+      trim: true,
+      sparse: true,
+    },
     blogdate: {
       type: Date,
       required: true,

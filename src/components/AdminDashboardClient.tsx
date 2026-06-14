@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { compressImage } from "@/lib/imageCompressor";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -293,10 +294,11 @@ export default function AdminDashboardClient() {
     if (!file) return;
 
     setUploading(true);
-    const formData = new FormData();
-    formData.append("image", file);
-
     try {
+      const compressedFile = await compressImage(file);
+      const formData = new FormData();
+      formData.append("image", compressedFile);
+
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
@@ -321,10 +323,11 @@ export default function AdminDashboardClient() {
     if (!file) return;
 
     setUploadingCastImage(true);
-    const formData = new FormData();
-    formData.append("image", file);
-
     try {
+      const compressedFile = await compressImage(file);
+      const formData = new FormData();
+      formData.append("image", compressedFile);
+
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
@@ -535,10 +538,11 @@ export default function AdminDashboardClient() {
     if (!file) return;
 
     setUploadingLogo(true);
-    const formData = new FormData();
-    formData.append("image", file);
-
     try {
+      const compressedFile = await compressImage(file);
+      const formData = new FormData();
+      formData.append("image", compressedFile);
+
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
@@ -670,36 +674,47 @@ export default function AdminDashboardClient() {
     setUploadingGallery(true);
     const uploadedUrls: string[] = [];
     const totalFiles = selectedGalleryFiles.length;
+    const errorMsgs: string[] = [];
 
     try {
       for (let i = 0; i < totalFiles; i++) {
         const file = selectedGalleryFiles[i];
-        setUploadProgress(`Uploading image ${i + 1} of ${totalFiles}...`);
+        setUploadProgress(`Compressing and uploading image ${i + 1} of ${totalFiles}...`);
 
-        const formData = new FormData();
-        formData.append("image", file);
+        try {
+          const compressedFile = await compressImage(file);
+          const formData = new FormData();
+          formData.append("image", compressedFile);
 
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.url) {
-            uploadedUrls.push(data.url);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.url) {
+              uploadedUrls.push(data.url);
+            } else {
+              errorMsgs.push(`${file.name}: ${data.error || "Unknown error"}`);
+            }
           } else {
-            showToast(`Failed to upload ${file.name}: ${data.error || "Unknown error"}`, "error");
+            errorMsgs.push(`${file.name}: Server returned status ${res.status}`);
           }
-        } else {
-          showToast(`Network error uploading ${file.name}`, "error");
+        } catch (err: any) {
+          errorMsgs.push(`${file.name}: ${err.message || "Compression/Upload error"}`);
         }
       }
 
       if (uploadedUrls.length === 0) {
-        showToast("No images were successfully uploaded", "error");
+        const errorDetail = errorMsgs.length > 0 ? `. Details: ${errorMsgs.join(", ")}` : "";
+        showToast(`No images were successfully uploaded${errorDetail}`, "error");
         setUploadingGallery(false);
         return;
+      }
+
+      if (errorMsgs.length > 0) {
+        showToast(`Uploaded ${uploadedUrls.length} of ${totalFiles} images. Errors: ${errorMsgs.join(", ")}`, "error");
       }
 
       setUploadProgress("Saving image links to database...");
@@ -752,6 +767,7 @@ export default function AdminDashboardClient() {
     _id: string;
     banner: string;
     title: string;
+    slug?: string;
     blogdate: string;
     content: string;
     createdAt: string;
@@ -795,10 +811,11 @@ export default function AdminDashboardClient() {
     if (!file) return;
 
     setUploadingBlogBanner(true);
-    const formData = new FormData();
-    formData.append("image", file);
-
     try {
+      const compressedFile = await compressImage(file);
+      const formData = new FormData();
+      formData.append("image", compressedFile);
+
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
@@ -822,11 +839,12 @@ export default function AdminDashboardClient() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("image", file);
-
     try {
-      showToast("Uploading editor image...");
+      showToast("Compressing and uploading editor image...");
+      const compressedFile = await compressImage(file);
+      const formData = new FormData();
+      formData.append("image", compressedFile);
+
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
@@ -1009,10 +1027,11 @@ export default function AdminDashboardClient() {
     if (!file) return;
 
     setUploadingBrandLogo(true);
-    const formData = new FormData();
-    formData.append("image", file);
-
     try {
+      const compressedFile = await compressImage(file);
+      const formData = new FormData();
+      formData.append("image", compressedFile);
+
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,

@@ -9,6 +9,7 @@ interface BlogPost {
   _id: string;
   banner: string;
   title: string;
+  slug?: string;
   blogdate: string;
   content: string;
   createdAt: string;
@@ -139,7 +140,7 @@ export default function BlogClient({ initialBlogs }: BlogClientProps) {
               onMouseEnter={() => setHoveredCardId(blog._id)}
               onMouseLeave={() => setHoveredCardId(null)}
             >
-              <Link href={`/blog/${blog._id}`} className="flex flex-col h-full">
+              <Link href={`/blog/${blog.slug || blog._id}`} className="flex flex-col h-full">
                 {/* Banner wrapper */}
                 <div className="relative aspect-video w-full overflow-hidden bg-black/40 border-b border-white/5">
                   <img
